@@ -14,8 +14,8 @@
 WiFiClient espClient;
 PubSubClient client(espClient);
 
-const char *HOST = "sua rede WiFi";
-const char *PASSWORD = "sua senha da rede";
+const char *HOST = "moto22";
+const char *PASSWORD = "moisesdcil";
 const char *MQTT_BROKER = "broker.hivemq.com";
 const int MQTT_PORT = 1883;
 
@@ -45,10 +45,10 @@ void setupMqtt()
 
   while (!client.connected())
   {
-    String clientIdStr = "esp32_" + String(random(0xffff), HEX);
-    char *clientId = clientIdStr.c_str();
+    // String clientIdStr = "esp32_" + String(random(0xffff), HEX);
+    // char *clientId = clientIdStr.c_str();
 
-    if (client.connect(clientId))
+    if (client.connect("esp32".c_str()))
     {
       Serial.println("Conectado ao broker MQTT!");
     }

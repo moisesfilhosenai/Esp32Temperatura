@@ -9,18 +9,24 @@
  */
 
 #include <PubSubClient.h>
+#include <LiquidCrystal_I2C.h>
 #include <WiFi.h>
 #include <DHT.h>
 
-#define DHTPIN 4      
+#define DHTPIN 4
 #define DHTTYPE DHT11
 
 WiFiClient espClient;
 PubSubClient client(espClient);
 DHT dht(DHTPIN, DHTTYPE);
 
+int lcdColumns = 16;
+int lcdRows = 2;
+LiquidCrystal_I2C lcd(0x27, lcdColumns, lcdRows);
+
 void setupWiFi() {
-  WiFi.begin("Moto G (5S) 1511", "clayste2112");
+  //   WiFi.begin("Moto G (5S) 1511", "clayste2112");
+  WiFi.begin("moto22", "moisesdcil");
 
   if (WiFi.status() == WL_CONNECTED) {
     Serial.println("Conectado à rede WiFI.");
@@ -49,19 +55,42 @@ void setupMqtt() {
   }
 }
 
-void enviarDadosBroker() {
-  delay(2000);
-  float humidity = dht.readHumidity();      
-  float temperature = dht.readTemperature();
+void limparLcd() {
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print(" Buscando Dados ");
+  
+  for (int i=0; i < 16; i++) {
+    delay(200);
+    lcd.setCursor(i, 1);
+    lcd.print(".");
+  }
+}
 
-  char payload[50];
-  sprintf(payload, "%.2f|%.2f", temperature, humidity);
+void mostrarDadosLcd(float umidade, float temperatura) {
+  String temp = "Temp: " + String(temperatura) + " C";
+  String umi = " Hum: " + String(umidade) + " %";
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print(temp);
+  lcd.setCursor(0, 1);
+  lcd.print(umi);
+}
+
+void enviarDadosBroker() {
+  float umidade = dht.readHumidity();
+  float temperatura = dht.readTemperature();
+  mostrarDadosLcd(umidade, temperatura);
+
+  char dados[50];
+  sprintf(dados, "%.2f|%.2f", temperatura, umidade);
 
   char topico[] = "senai_temp_umid";
-  client.publish(topico, payload);
+  client.publish(topico, dados);
 
-  delay(2000);
+  delay(3000);
   client.publish(topico, "0.00|0.00");
+  limparLcd();
 }
 
 void setup() {
@@ -71,11 +100,14 @@ void setup() {
   setupMqtt();
 
   dht.begin();
+
+  lcd.init();
+  lcd.begin(16, 2);
+  lcd.backlight();
 }
 
 void loop() {
   client.loop();
   delay(2000);
-
   enviarDadosBroker();
 }

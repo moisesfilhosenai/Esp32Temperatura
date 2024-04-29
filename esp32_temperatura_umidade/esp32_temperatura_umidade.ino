@@ -10,50 +10,38 @@
 
 #include <PubSubClient.h>
 #include <WiFi.h>
+#include <DHT.h>
+
+#define DHTPIN 4      
+#define DHTTYPE DHT11
 
 WiFiClient espClient;
 PubSubClient client(espClient);
+DHT dht(DHTPIN, DHTTYPE);
 
-const char *HOST = "moto22";
-const char *PASSWORD = "moisesdcil";
-const char *MQTT_BROKER = "broker.hivemq.com";
-const int MQTT_PORT = 1883;
+void setupWiFi() {
+  WiFi.begin("Moto G (5S) 1511", "clayste2112");
 
-void setupWiFi()
-{
-
-  // Faz a conexão
-  WiFi.begin(HOST, PASSWORD);
-
-  if (WiFi.status() == WL_CONNECTED)
-  {
+  if (WiFi.status() == WL_CONNECTED) {
     Serial.println("Conectado à rede WiFI.");
-  }
-  else
-  {
-    while (WiFi.status() != WL_CONNECTED)
-    {
+  } else {
+    while (WiFi.status() != WL_CONNECTED) {
       delay(1000);
       Serial.println("Conectando WiFi...");
     }
   }
 }
 
-void setupMqtt()
-{
-  client.setServer(MQTT_BROKER, MQTT_PORT);
+void setupMqtt() {
+  client.setServer("broker.hivemq.com", 1883);
 
-  while (!client.connected())
-  {
-    // String clientIdStr = "esp32_" + String(random(0xffff), HEX);
-    // char *clientId = clientIdStr.c_str();
+  while (!client.connected()) {
+    String clientId = "ESP8266Client-";
+    clientId += String(random(0xffff), HEX);
 
-    if (client.connect("esp32".c_str()))
-    {
+    if (client.connect(clientId.c_str())) {
       Serial.println("Conectado ao broker MQTT!");
-    }
-    else
-    {
+    } else {
       Serial.print("Falha na conexão. Código de erro: ");
       Serial.println(client.state());
       delay(2000);
@@ -61,15 +49,33 @@ void setupMqtt()
   }
 }
 
-void setup()
-{
+void enviarDadosBroker() {
+  delay(2000);
+  float humidity = dht.readHumidity();      
+  float temperature = dht.readTemperature();
+
+  char payload[50];
+  sprintf(payload, "%.2f|%.2f", temperature, humidity);
+
+  char topico[] = "senai_temp_umid";
+  client.publish(topico, payload);
+
+  delay(2000);
+  client.publish(topico, "0.00|0.00");
+}
+
+void setup() {
   Serial.begin(115200);
 
   setupWiFi();
   setupMqtt();
+
+  dht.begin();
 }
 
-void loop()
-{
+void loop() {
   client.loop();
+  delay(2000);
+
+  enviarDadosBroker();
 }
